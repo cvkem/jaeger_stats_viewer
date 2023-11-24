@@ -1,15 +1,25 @@
 import { CommonModule } from "@angular/common";
 import { AfterViewInit, Component, ElementRef, ViewChild } from "@angular/core";
-import mermaid from 'mermaid';
-import { combineLatest, filter, switchMap, take } from "rxjs";
-import { JaegerDataService } from "src/app/services/jaeger-data.service";
-import { MERMAID_CONFIG } from "../../dashboard.constants";
-import { DashboardService } from "../../dashboard.service";
 import { ClipboardModule, Clipboard } from '@angular/cdk/clipboard';
+import { combineLatest, filter, switchMap, take, tap } from "rxjs";
+import { FormsModule } from '@angular/forms'
+
+//@ts-ignore
+import panzoom from 'svg-pan-zoom';
+import mermaid from 'mermaid';
+
+import { DropdownModule } from 'primeng/dropdown';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { SelectButtonModule } from 'primeng/selectbutton';
+
+import { JaegerDataService } from "src/app/services/jaeger-data.service";
+import { MERMAID_CONFIG } from "../../dashboard.constants";
+import { DashboardService } from "../../dashboard.service";
+import { MermaidGraphScope } from "../../enums";
+
 
 @Component({
     standalone: true,
@@ -20,21 +30,43 @@ import { MessageService } from 'primeng/api';
         ButtonModule,
         DialogModule,
         ClipboardModule,
-        ToastModule
+        ToastModule,
+        SelectButtonModule,
+        FormsModule,
+        DropdownModule
     ],
     styles: [`
         .visualize-button {
             transform: translateX(-50%);
             bottom: 1rem;
         }
+        .mermaid {
+            height: 45rem;
+        }
+        ::ng-deep #graphDiv {
+            height: 100%;
+            max-width: 100%;
+        }
   `],
   providers: [MessageService]
 })
 export class VisualizationDialogComponent implements AfterViewInit {
-    @ViewChild('mermaid') mermaidElement: ElementRef
+    @ViewChild('mermaid', { static: false }) mermaidElement: ElementRef
 
     isOpen = false;
     graphDefinition: string;
+    pzoom: typeof panzoom | undefined;
+
+    isCompact = false;
+    compactOptions: any[] = [{label: 'Full view', value: false}, {label: 'Compact', value: true}];
+    
+    scope = MermaidGraphScope.FULL
+    scopeOptions: any[] = [
+        {label: 'Full', value: MermaidGraphScope.FULL}, 
+        {label: 'Centered', value: MermaidGraphScope.CENTERED},
+        {label: 'Inbound', value: MermaidGraphScope.INBOUND},
+        {label: 'Outbound', value: MermaidGraphScope.OUTBOUND},
+    ];
 
     constructor(
         public readonly _dashboard: DashboardService,
@@ -47,6 +79,10 @@ export class VisualizationDialogComponent implements AfterViewInit {
         mermaid.initialize(MERMAID_CONFIG);
     }
 
+    onClosingDialog() {
+        this.mermaidElement.nativeElement.innerHTML = '';
+    }
+
     public openDialog() {
         this.isOpen = true;
         this.fetchMermaidGraphData();
@@ -57,17 +93,17 @@ export class VisualizationDialogComponent implements AfterViewInit {
         this._message.add({ severity: 'success', summary: 'Copied!', detail: 'Graph definition copied to your clipboard.' });
     }
 
-    private fetchMermaidGraphData() {
+    fetchMermaidGraphData() {
         combineLatest([
             this._dashboard.selectedProcess$,
             this._dashboard.selectedRelatedProcess$
         ]).pipe(
             take(1),
-            filter(([mainProcess, relatedProcess]) => !!mainProcess?.key && !!relatedProcess?.key),
             switchMap(([mainProcess, relatedProcess]) => this._jaeger.getMermaidDiagram(
                 mainProcess?.key as string,
-                relatedProcess?.key as string,
-                false
+                relatedProcess?.key ?? null,
+                this.scope,
+                this.isCompact
             )),
         ).subscribe(graphDefinition => {
             this.graphDefinition = graphDefinition;
@@ -75,8 +111,31 @@ export class VisualizationDialogComponent implements AfterViewInit {
         })
     }
 
-    async updateMermaidGraph(graphDefinition: string) {
-        const { svg } = await mermaid.render('graphDiv', graphDefinition);
+    private async updateMermaidGraph(graphDefinition: string) {
+        this.mermaidElement.nativeElement.innerHTML = '';
+        const { svg, bindFunctions } = await mermaid.render('graphDiv', graphDefinition, this.mermaidElement.nativeElement);
         this.mermaidElement.nativeElement.innerHTML = svg;
+        this.initZoom();
+
+        if (bindFunctions) {
+            bindFunctions(this.mermaidElement.nativeElement);
+        }
+    }
+
+    private initZoom() {
+        this.pzoom?.destroy();
+
+        void Promise.resolve().then(() => {
+            const graphDiv = document.getElementById('graphDiv');
+            if (!graphDiv) {
+              return;
+            }
+            this.pzoom = panzoom(graphDiv, {
+              controlIconsEnabled: true,
+              contain: true,
+              center: true,
+              zoomScaleSensitivity: 0.4
+            });
+          });
     }
 }
