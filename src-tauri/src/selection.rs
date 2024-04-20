@@ -1,7 +1,7 @@
 use std::ops::DerefMut;
 
 use super::backend::STITCHED;
-use jaeger_stats::Selection;
+use jaeger_stats::{types::Selection, Viewer};
 use log::error;
 
 

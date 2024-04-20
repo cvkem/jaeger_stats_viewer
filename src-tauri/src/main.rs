@@ -4,8 +4,6 @@
 use clap::Parser;
 use log::{error, info};
 use std::env;
-//use std::{error::Error, fs, io, time::Instant};
-use std::time::{Duration, Instant};
 
 mod backend;
 mod chart_descr;
@@ -49,15 +47,6 @@ fn main() {
     info!("Starting the back-end server for the Jaeger-stats dashboard");
     match &load_stitch_data(input_file)[..] {
         "Ok" | "ok" => {
-            // //TMP: test a selection 
-            // {
-            //     let sel = get_labeled_selection();
-            //     info!("get_labeled_selection returned {sel:?}");
-            //     let now = Instant::now();
-            //     let selected = sel.iter().map(|sl| sl.idx > 20 ).collect();
-            //     set_selection(selected);
-            //     info!("set-selection elapsed: {:?}", now.elapsed());
-            // }
             tauri::Builder::default()
                 .plugin(tauri_plugin_log::Builder::default().build()) // allow Tauri logging
                 .invoke_handler(tauri::generate_handler![

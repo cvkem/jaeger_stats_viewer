@@ -1,7 +1,6 @@
 use super::backend::STITCHED;
-use jaeger_stats::{self, Table};
-use log::{debug, error, info};
-use serde::Serialize;
+use jaeger_stats::{self, types::Table, Viewer};
+use log::{error, info};
 
 #[tauri::command]
 pub fn get_file_stats() -> Option<Table> {

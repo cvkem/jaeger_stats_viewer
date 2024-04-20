@@ -1,6 +1,8 @@
 use super::backend::STITCHED;
-use jaeger_stats::{self, ChartDataParameters, ChartLine as ChartLine_opt, ProcessListItem};
-use log::{debug, error, info};
+use jaeger_stats::{
+        types::{ChartDataParameters, ChartLine as ChartLine_opt, ProcessListItem},
+        Viewer};
+use log::{error, info};
 use serde::Serialize;
 use std::env;
 
@@ -57,7 +59,7 @@ pub fn get_call_chain_list(
     let guard = STITCHED.lock().unwrap();
     match &*guard {
         Some(sd) => {
-            sd.get_call_chain_list(proc_oper, metric, scope, inbound_idx)
+            sd.get_call_chain_list(proc_oper, metric, scope.try_into().expect("Failed to translate scope"), inbound_idx)
         }
         None => {
             error!("Not stitched data loaded");
@@ -118,7 +120,7 @@ pub fn get_process_data(proc_oper: &str, metric: &str) -> ChartData {
     let guard = STITCHED.lock().unwrap();
     match &*guard {
         Some(sd) => ChartData::new(
-            sd.get_proc_oper_chart_data(proc_oper, metric).unwrap(),
+            sd.get_service_oper_chart_data(proc_oper, metric).unwrap(),
             proc_oper,
             metric,
         ),

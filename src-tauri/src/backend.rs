@@ -1,4 +1,4 @@
-use jaeger_stats::StitchedDataSet;
+use jaeger_stats::{StitchedDataSet, Viewer};
 use log::error;
 use std::sync::Mutex;
 
@@ -13,7 +13,7 @@ pub fn set_stitched_data(val: StitchedDataSet) {
 pub fn load_stitch_data(file_name: &str) -> String {
     match StitchedDataSet::from_file(file_name) {
         Ok(ds) => {
-            set_stitched_data(ds);
+            set_stitched_data(*ds);
             "ok".to_string()
         },
         Err(err) => {
