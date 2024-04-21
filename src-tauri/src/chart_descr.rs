@@ -26,7 +26,7 @@ pub fn get_process_list(metric: Option<&str>) -> Vec<ProcessListItem> {
 
     let guard = STITCHED.lock().unwrap();
     match &*guard {
-        Some(sd) => sd.get_process_list(metric),
+        Some(sd) => sd.get_process_list(metric.try_into().expect("Failed to map string to enum Metric")),
         None => {
             error!("Not stitched data loaded");
             Vec::new()
@@ -59,7 +59,7 @@ pub fn get_call_chain_list(
     let guard = STITCHED.lock().unwrap();
     match &*guard {
         Some(sd) => {
-            sd.get_call_chain_list(proc_oper, metric, scope.try_into().expect("Failed to translate scope"), inbound_idx)
+            sd.get_call_chain_list(proc_oper, metric.try_into().expect("Failed to map string to enum Metric"), scope.try_into().expect("Failed to map string  enum TraceScope"), inbound_idx)
         }
         None => {
             error!("Not stitched data loaded");
@@ -120,7 +120,7 @@ pub fn get_process_data(proc_oper: &str, metric: &str) -> ChartData {
     let guard = STITCHED.lock().unwrap();
     match &*guard {
         Some(sd) => ChartData::new(
-            sd.get_service_oper_chart_data(proc_oper, metric).unwrap(),
+            sd.get_service_oper_chart_data(proc_oper, metric.try_into().expect("Failed to map to enum Metric")).unwrap(),
             proc_oper,
             metric,
         ),
@@ -139,7 +139,7 @@ pub fn get_call_chain_data(cc_key: &str, metric: &str) -> ChartData {
     let guard = STITCHED.lock().unwrap();
     match &*guard {
         Some(sd) => {
-            match sd.get_call_chain_chart_data(cc_key, metric) {
+            match sd.get_call_chain_chart_data(cc_key, metric.try_into().expect("Failed to map to enum Metric")) {
                 Some(ccd) => {
                     info!("Chart data has description {:?}", ccd.description);
                     ChartData::new(ccd, cc_key, metric)
